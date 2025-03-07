@@ -1,9 +1,11 @@
 document.addEventListener("DOMContentLoaded", async () => {
+  const API_BASE_URL = "https://companies-house-search.onrender.com"; // Replace with your Render backend URL
+
   const savedCompaniesDiv = document.getElementById("saved-companies");
 
   const loadSavedCompanies = async () => {
     try {
-      const response = await fetch("/saved");
+      const response = await fetch(`${API_BASE_URL}/saved`);
       const savedCompanies = await response.json();
 
       savedCompaniesDiv.innerHTML = "";
@@ -20,27 +22,27 @@ document.addEventListener("DOMContentLoaded", async () => {
           statusClass = "status-liquidation";
 
         savedDiv.innerHTML = `
-                    <div class="company-header" onclick="toggleCompanyDetails(this)">
-                        <strong>${company.title}</strong> 
-                        <span class="company-status ${statusClass}">${
+                  <div class="company-header" onclick="toggleCompanyDetails(this)">
+                      <strong>${company.title}</strong> 
+                      <span class="company-status ${statusClass}">${
           company.company_status
         }</span>
-                    </div>
-                    <div class="company-details hidden">
-                        <p><strong>Company Number:</strong> ${
-                          company.company_number || "N/A"
-                        }</p>
-                        <p><strong>Accounts Due:</strong> ${
-                          company.accounts?.next_due || "N/A"
-                        }</p>
-                        <p><strong>Confirmation Statement Due:</strong> ${
-                          company.confirmation_statement?.next_due || "N/A"
-                        }</p>
-                        <button class="remove-button" onclick="removeCompany('${
-                          company.company_number
-                        }')">Remove</button>
-                    </div>
-                `;
+                  </div>
+                  <div class="company-details hidden">
+                      <p><strong>Company Number:</strong> ${
+                        company.company_number || "N/A"
+                      }</p>
+                      <p><strong>Accounts Due:</strong> ${
+                        company.accounts?.next_due || "N/A"
+                      }</p>
+                      <p><strong>Confirmation Statement Due:</strong> ${
+                        company.confirmation_statement?.next_due || "N/A"
+                      }</p>
+                      <button class="remove-button" onclick="removeCompany('${
+                        company.company_number
+                      }')">Remove</button>
+                  </div>
+              `;
 
         savedCompaniesDiv.appendChild(savedDiv);
       });
@@ -55,8 +57,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   window.removeCompany = async function (companyNumber) {
-    await fetch(`/remove/${companyNumber}`, { method: "DELETE" });
-    loadSavedCompanies();
+    try {
+      await fetch(`${API_BASE_URL}/remove/${companyNumber}`, {
+        method: "DELETE",
+      });
+      loadSavedCompanies();
+    } catch (error) {
+      console.error("Error removing company:", error);
+    }
   };
 
   loadSavedCompanies();

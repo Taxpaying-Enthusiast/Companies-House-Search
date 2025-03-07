@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const API_BASE_URL = "https://companies-house-search.onrender.com"; // Replace with your Render backend URL
+
   const searchInput = document.getElementById("search-input");
   const searchButton = document.getElementById("search-button");
   const resultsDiv = document.getElementById("results");
@@ -9,68 +11,50 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!query) return alert("Please enter a company name!");
 
     try {
-      const response = await fetch(`/search?q=${query}`);
+      const response = await fetch(`${API_BASE_URL}/search?q=${query}`);
       const data = await response.json();
 
       resultsDiv.innerHTML = ""; // Clear previous results
 
       if (data.items && data.items.length > 0) {
-        // Process each company from search results
-        data.items.forEach(async (company) => {
-          try {
-            // Fetch detailed company data from a new endpoint on the server
-            const detailResponse = await fetch(
-              `/company/${company.company_number}`
-            );
-            const detailsData = await detailResponse.json();
-            // Merge detailed fields into the original company object
-            const fullCompany = { ...company, ...detailsData };
+        data.items.forEach((company) => {
+          const companyDiv = document.createElement("div");
+          companyDiv.classList.add("company");
 
-            const companyDiv = document.createElement("div");
-            companyDiv.classList.add("company");
+          let statusClass = "";
+          if (company.company_status === "active")
+            statusClass = "status-active";
+          else if (company.company_status === "dissolved")
+            statusClass = "status-dissolved";
+          else if (company.company_status === "liquidation")
+            statusClass = "status-liquidation";
 
-            let statusClass = "";
-            if (company.company_status === "active")
-              statusClass = "status-active";
-            else if (company.company_status === "dissolved")
-              statusClass = "status-dissolved";
-            else if (company.company_status === "liquidation")
-              statusClass = "status-liquidation";
+          companyDiv.innerHTML = `
+                      <div class="company-header" onclick="toggleCompanyDetails(this)">
+                          <strong>${company.title}</strong> 
+                          <span class="company-status ${statusClass}">${
+            company.company_status
+          }</span>
+                      </div>
+                      <div class="company-details hidden">
+                          <p><strong>Company Number:</strong> ${
+                            company.company_number || "N/A"
+                          }</p>
+                          <p><strong>Accounts Due:</strong> ${
+                            company.accounts?.next_due || "N/A"
+                          }</p>
+                          <p><strong>Confirmation Statement Due:</strong> ${
+                            company.confirmation_statement?.next_due || "N/A"
+                          }</p>
+                          <button class="save-button" onclick='saveCompany(${JSON.stringify(
+                            company
+                          )
+                            .replace(/'/g, "&#39;")
+                            .replace(/"/g, "&quot;")})'>Save</button>
+                      </div>
+                  `;
 
-            companyDiv.innerHTML = `
-                            <div class="company-header" onclick="toggleCompanyDetails(this)">
-                                <strong>${company.title}</strong> 
-                                <span class="company-status ${statusClass}">${
-              company.company_status
-            }</span>
-                            </div>
-                            <div class="company-details hidden">
-                                <p><strong>Company Number:</strong> ${
-                                  company.company_number || "N/A"
-                                }</p>
-                                <p><strong>Accounts Due:</strong> ${
-                                  fullCompany.accounts?.next_due || "N/A"
-                                }</p>
-                                <p><strong>Confirmation Statement Due:</strong> ${
-                                  fullCompany.confirmation_statement
-                                    ?.next_due || "N/A"
-                                }</p>
-                                <button class="save-button" onclick='saveCompany(${JSON.stringify(
-                                  company
-                                )
-                                  .replace(/'/g, "&#39;")
-                                  .replace(/"/g, "&quot;")})'>Save</button>
-                            </div>
-                        `;
-
-            resultsDiv.appendChild(companyDiv);
-          } catch (detailError) {
-            console.error(
-              "Error fetching details for company",
-              company.company_number,
-              detailError
-            );
-          }
+          resultsDiv.appendChild(companyDiv);
         });
       } else {
         resultsDiv.innerHTML = "<p>No results found.</p>";
@@ -81,16 +65,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // Toggle the company details visibility
   window.toggleCompanyDetails = function (headerElement) {
     const details = headerElement.nextElementSibling;
     details.classList.toggle("hidden");
   };
 
-  // Save company function using backend API
   window.saveCompany = async function (company) {
     try {
-      await fetch("/save", {
+      await fetch(`${API_BASE_URL}/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(company),
